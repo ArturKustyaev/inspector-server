@@ -1,4 +1,4 @@
-import { IsEnum, IsNumber, IsOptional, IsString, MinLength, isEnum } from 'class-validator'
+import { IsEmail, IsEnum, IsNumber, IsOptional, IsString, MinLength, isEnum } from 'class-validator'
 
 export class GetUsersQueryDTO {
 	@IsNumber()
@@ -32,6 +32,9 @@ export class UpdateUserDTO {
 		message: 'Пароль не может быть меньше 5 символов',
 	})
 	password: string
+
+	@IsEmail()
+	email: string
 
 	@IsEnum(['user', 'admin', 'supervisor', 'lawyer'])
 	role: string

@@ -22,7 +22,7 @@ export class UserService {
 					{ login: { $regex: query, $options: 'i' } },
 				],
 			})
-			.select('-__v -password -createdAt -updatedAt')
+			.select('-__v -createdAt -updatedAt')
 			.skip(skip)
 			.limit(limit)
 		const total = await this.userModel.countDocuments().exec()
@@ -89,10 +89,12 @@ export class UserService {
 
 		return {
 			_id: user._id,
-			login: user.login,
 			lastName: user.lastName,
 			firstName: user.firstName,
 			middleName: user.middleName,
+			email: user.email,
+			login: user.login,
+			password: user.password,
 			role: user.role,
 		}
 	}

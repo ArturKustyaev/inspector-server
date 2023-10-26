@@ -1,6 +1,5 @@
 import { prop } from '@typegoose/typegoose'
-import { TimeStamps, Base } from '@typegoose/typegoose/lib/defaultClasses'
-import mongoose from 'mongoose'
+import { Base, TimeStamps } from '@typegoose/typegoose/lib/defaultClasses'
 
 export interface UserModel extends Base {}
 
@@ -15,6 +14,10 @@ export class UserModel extends TimeStamps {
 	login: string
 	@prop()
 	password: string
+
+	@prop()
+	email: string
+
 	@prop({ enum: ['user', 'admin', 'supervisor', 'lawyer'], default: 'user' })
 	role: string
 }
