@@ -10,22 +10,25 @@ import { UserModel } from './user.model'
 export class UserService {
 	constructor(@InjectModel(UserModel) private readonly userModel: ModelType<UserModel>) {}
 
-	async getAll({ page = 1, limit = 2, query = '' }: GetUsersRequest) {
+	async getAll({ page = 1, limit = 30, query = '' }: GetUsersRequest) {
 		const skip = (page - 1) * limit
+
+		const queryParams = [
+			{ firstName: { $regex: query, $options: 'i' } },
+			{ lastName: { $regex: query, $options: 'i' } },
+			{ middleName: { $regex: query, $options: 'i' } },
+			{ login: { $regex: query, $options: 'i' } },
+		]
 
 		const users = await this.userModel
 			.find({
-				$or: [
-					{ firstName: { $regex: query, $options: 'i' } },
-					{ lastName: { $regex: query, $options: 'i' } },
-					{ middleName: { $regex: query, $options: 'i' } },
-					{ login: { $regex: query, $options: 'i' } },
-				],
+				$or: queryParams,
 			})
-			.select('-__v -createdAt -updatedAt')
+			.select('-__v -createdAt -password -updatedAt')
 			.skip(skip)
 			.limit(limit)
-		const total = await this.userModel.countDocuments().exec()
+
+		const total = await this.userModel.countDocuments({ $or: queryParams }).exec()
 
 		return {
 			data: users,
@@ -69,11 +72,10 @@ export class UserService {
 		}
 
 		const salt = await genSalt(10)
-		const newPassword = await hash(dto.password, salt)
 
 		const updatedUser = await this.userModel.findByIdAndUpdate(
 			id,
-			{ $set: { ...dto, password: newPassword } },
+			{ $set: { ...dto, ...(dto.password && { password: await hash(dto.password, salt) }) } },
 			{ new: true },
 		)
 
@@ -94,7 +96,6 @@ export class UserService {
 			middleName: user.middleName,
 			email: user.email,
 			login: user.login,
-			password: user.password,
 			role: user.role,
 		}
 	}

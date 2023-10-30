@@ -1,18 +1,4 @@
-import { IsEmail, IsEnum, IsNumber, IsOptional, IsString, MinLength, isEnum } from 'class-validator'
-
-export class GetUsersQueryDTO {
-	@IsNumber()
-	@IsOptional()
-	page?: number
-
-	@IsNumber()
-	@IsOptional()
-	limit?: number
-
-	@IsString()
-	@IsOptional()
-	query?: string
-}
+import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator'
 
 export class UpdateUserDTO {
 	@IsString()
@@ -28,6 +14,7 @@ export class UpdateUserDTO {
 	login: string
 
 	@IsString()
+	@IsOptional()
 	@MinLength(5, {
 		message: 'Пароль не может быть меньше 5 символов',
 	})

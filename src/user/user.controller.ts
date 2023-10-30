@@ -12,9 +12,10 @@ import {
 	UsePipes,
 	ValidationPipe,
 } from '@nestjs/common'
+import { PaginatedQueryDto } from 'src/app.interface'
 import { Auth } from 'src/auth/auth.decorator'
 import { User } from './user.decorator'
-import { GetUsersQueryDTO, UpdateUserDTO } from './user.dto'
+import { UpdateUserDTO } from './user.dto'
 import { NotFoundInterceptor } from './user.interceptor'
 import { UserService } from './user.service'
 
@@ -38,7 +39,7 @@ export class UserController {
 				forbidNonWhitelisted: true,
 			}),
 		)
-		{ page, limit, query }: GetUsersQueryDTO,
+		{ page, limit, query }: PaginatedQueryDto,
 	) {
 		return this.userService.getAll({ page: page ?? 1, limit: limit ?? 30, query })
 	}
@@ -70,7 +71,7 @@ export class UserController {
 	@Delete(':id')
 	@Auth()
 	@UseInterceptors(new NotFoundInterceptor('Пользователь не найден'))
-	async deleteUser(@Param('id') id: string) {
+	async delete(@Param('id') id: string) {
 		return this.userService.delete(id)
 	}
 }
