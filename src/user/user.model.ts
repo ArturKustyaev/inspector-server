@@ -20,4 +20,7 @@ export class UserModel extends TimeStamps {
 
 	@prop({ enum: ['user', 'admin', 'supervisor', 'lawyer'], default: 'user' })
 	role: string
+
+	@prop()
+	avatarExt: string
 }

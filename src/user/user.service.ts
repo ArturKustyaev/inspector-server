@@ -64,7 +64,7 @@ export class UserService {
 		return this.getPublicUserFields(newUser)
 	}
 
-	async update(id: string, dto: UpdateUserDTO) {
+	async update(id: string, dto: UpdateUserDTO, avatarExt: string | undefined) {
 		const oldUser = await this.userModel.findOne({ login: dto.login })
 
 		if (oldUser && oldUser._id.toString() !== id) {
@@ -72,10 +72,10 @@ export class UserService {
 		}
 
 		const salt = await genSalt(10)
-
+		console.log(avatarExt)
 		const updatedUser = await this.userModel.findByIdAndUpdate(
 			id,
-			{ $set: { ...dto, ...(dto.password && { password: await hash(dto.password, salt) }) } },
+			{ $set: { ...dto, ...(dto.password && { password: await hash(dto.password, salt) }), ...( avatarExt && { avatarExt } ) } },
 			{ new: true },
 		)
 
@@ -97,6 +97,7 @@ export class UserService {
 			email: user.email,
 			login: user.login,
 			role: user.role,
+			avatarExt: user.avatarExt
 		}
 	}
 }

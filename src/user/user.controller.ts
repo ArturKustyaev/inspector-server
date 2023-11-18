@@ -20,6 +20,8 @@ import { UpdateUserDTO } from './user.dto'
 import { NotFoundInterceptor } from './user.interceptor'
 import { UserService } from './user.service'
 import { FileInterceptor } from '@nestjs/platform-express'
+import { diskStorage } from 'multer'
+import { existsSync, mkdirSync } from 'fs'
 
 @Controller('users')
 export class UserController {
@@ -66,11 +68,28 @@ export class UserController {
 	@HttpCode(200)
 	@UsePipes(new ValidationPipe())
 	@UseInterceptors(new NotFoundInterceptor('Пользователь не найден'))
-	@UseInterceptors(FileInterceptor('file'))
-	async update(@Param('id') id: string, @Body() dto: UpdateUserDTO, @UploadedFile() file: Express.Multer.File) {
-		console.log(dto, file)
+	@UseInterceptors(FileInterceptor('file', { 
+		storage: diskStorage({
+			destination: (req: any, file: any, cb: any) => {
+				const uploadPath = "./uploads/"
 
-		return this.userService.update(id, dto)
+				if(!existsSync(uploadPath)) {
+					mkdirSync(uploadPath)
+				}
+
+				if(!existsSync(`${uploadPath}/${req.params.id}`)) {
+					mkdirSync(`${uploadPath}/${req.params.id}`)
+				}
+				cb(null, uploadPath)
+			},
+			filename: (req: any, file: any, cb: any) => {
+				
+				cb(null, `${req.params.id}/avatar.${file.originalname.split(".")[1]}`);
+			},
+		})
+	}))
+	async update(@Param('id') id: string, @Body() dto: UpdateUserDTO, @UploadedFile() file: Express.Multer.File) {
+		return this.userService.update(id, dto, file.originalname.split(".")[1])
 	}
 
 	@Delete(':id')
