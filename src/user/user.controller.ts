@@ -8,6 +8,7 @@ import {
 	Post,
 	Put,
 	Query,
+	UploadedFile,
 	UseInterceptors,
 	UsePipes,
 	ValidationPipe,
@@ -18,6 +19,7 @@ import { User } from './user.decorator'
 import { UpdateUserDTO } from './user.dto'
 import { NotFoundInterceptor } from './user.interceptor'
 import { UserService } from './user.service'
+import { FileInterceptor } from '@nestjs/platform-express'
 
 @Controller('users')
 export class UserController {
@@ -64,7 +66,10 @@ export class UserController {
 	@HttpCode(200)
 	@UsePipes(new ValidationPipe())
 	@UseInterceptors(new NotFoundInterceptor('Пользователь не найден'))
-	async update(@Param('id') id: string, @Body() dto: UpdateUserDTO) {
+	@UseInterceptors(FileInterceptor('file'))
+	async update(@Param('id') id: string, @Body() dto: UpdateUserDTO, @UploadedFile() file: Express.Multer.File) {
+		console.log(dto, file)
+
 		return this.userService.update(id, dto)
 	}
 

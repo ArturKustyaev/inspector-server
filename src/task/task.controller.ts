@@ -34,9 +34,9 @@ export class TaskController {
 				forbidNonWhitelisted: true,
 			}),
 		)
-		{ page = 1, limit = 30, query = '' }: PaginatedQueryDto,
+		{ page, limit, query }: PaginatedQueryDto,
 	) {
-		return this.taskService.getAll(user, { page: page ?? 1, limit: limit ?? 30, query })
+		return this.taskService.getAll(user, { page, limit, query })
 	}
 
 	@Get(':id')
@@ -57,7 +57,7 @@ export class TaskController {
 	@Delete(':id')
 	@Auth()
 	@UseInterceptors(new NotFoundInterceptor('Задание не найдено'))
-	async delete(@Param('id') id: string) {
-		return this.taskService.delete(id)
+	async delete(@User() user: UserModel, @Param('id') id: string) {
+		return this.taskService.delete(user, id)
 	}
 }

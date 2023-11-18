@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable } from '@nestjs/common'
 import { ModelType } from '@typegoose/typegoose/lib/types'
 import { InjectModel } from 'nestjs-typegoose'
 import { UserModel, UserService } from 'src/user'
@@ -8,12 +8,9 @@ import { TaskModel } from './task.model'
 
 @Injectable()
 export class TaskService {
-	constructor(
-		@InjectModel(TaskModel) private readonly taskModel: ModelType<TaskModel>,
-		private readonly userService: UserService,
-	) {}
+	constructor(@InjectModel(TaskModel) private readonly taskModel: ModelType<TaskModel>) {}
 
-	async getAll(user: UserModel, { page, limit, query }: GetTasksRequest) {
+	async getAll(user: UserModel, { page = 1, limit = 30, query = '' }: GetTasksRequest) {
 		const skip = (page - 1) * limit
 
 		const tasks = await this.taskModel
@@ -52,7 +49,17 @@ export class TaskService {
 
 	async update() {}
 
-	async delete(id: string) {
-		return await this.taskModel.findByIdAndDelete(id)
+	async delete(user: UserModel, id: string) {
+		const task = await this.getById(id)
+
+		if (!task) return
+
+		if (task.userId !== user._id.toString() && user.role !== 'admin') {
+			throw new BadRequestException('Вы не можете удалить чужое задание')
+		}
+
+		await this.taskModel.deleteOne({ _id: id }).exec()
+
+		return task
 	}
 }
