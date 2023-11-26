@@ -6,7 +6,7 @@ import { UserModel, UserService } from 'src/user'
 import { AuthDto } from './dto/auth.dto'
 import { JwtService } from '@nestjs/jwt'
 import { RefreshTokenDto } from './dto/refreshToken.dto'
-import { UpdateUserDTO } from 'src/user/user.dto'
+import { UpdateUserDto } from 'src/user/user.dto'
 
 @Injectable()
 export class AuthService {
@@ -26,7 +26,7 @@ export class AuthService {
 		}
 	}
 
-	async register(dto: UpdateUserDTO) {
+	async register(dto: UpdateUserDto) {
 		const oldUser = await this.userModel.findOne({ login: dto.login })
 
 		if (oldUser) {

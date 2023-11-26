@@ -11,13 +11,13 @@ import {
 	UsePipes,
 	ValidationPipe,
 } from '@nestjs/common'
-import { Auth } from 'src/auth/auth.decorator'
-import { CreateTaskDto } from './task.dto'
-import { TaskService } from './task.service'
 import { PaginatedQueryDto } from 'src/app.interface'
-import { User } from 'src/user/user.decorator'
+import { Auth } from 'src/auth/auth.decorator'
 import { UserModel } from 'src/user'
+import { User } from 'src/user/user.decorator'
 import { NotFoundInterceptor } from 'src/user/user.interceptor'
+import { ChangeStatusDto, CreateTaskDto } from './task.dto'
+import { TaskService } from './task.service'
 
 @Controller('tasks')
 export class TaskController {
@@ -41,7 +41,7 @@ export class TaskController {
 
 	@Get(':id')
 	@Auth()
-	@UseInterceptors(new NotFoundInterceptor('Задание не найдено'))
+	@UseInterceptors(new NotFoundInterceptor('Запись о нарушении не найдена'))
 	async getById(@Param('id') id: string) {
 		return this.taskService.getById(id)
 	}
@@ -50,14 +50,23 @@ export class TaskController {
 	@HttpCode(200)
 	@Auth()
 	@UsePipes(new ValidationPipe())
-	async create(@User('_id') userId: string, @Body() dto: Omit<CreateTaskDto, 'userId'>) {
-		return this.taskService.create({ userId, ...dto })
+	async create(@User('_id') userId: string, @Body() dto: CreateTaskDto) {
+		return this.taskService.create(userId, dto)
 	}
 
 	@Delete(':id')
 	@Auth()
-	@UseInterceptors(new NotFoundInterceptor('Задание не найдено'))
+	@UseInterceptors(new NotFoundInterceptor('Запись о нарушении не найдена'))
 	async delete(@User() user: UserModel, @Param('id') id: string) {
 		return this.taskService.delete(user, id)
+	}
+
+	@Post('change-status')
+	@HttpCode(200)
+	@Auth()
+	@UsePipes(new ValidationPipe())
+	@UseInterceptors(new NotFoundInterceptor('Запись о нарушении не найдена'))
+	async changeStatus(@Body() dto: ChangeStatusDto) {
+		return this.taskService.changeStatus(dto)
 	}
 }

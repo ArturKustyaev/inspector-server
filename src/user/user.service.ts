@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common'
 import { ModelType } from '@typegoose/typegoose/lib/types'
 import { genSalt, hash } from 'bcryptjs'
 import { InjectModel } from 'nestjs-typegoose'
-import { UpdateUserDTO } from './user.dto'
+import { UpdateUserDto } from './user.dto'
 import { GetUsersRequest } from './user.interface'
 import { UserModel } from './user.model'
 
@@ -42,7 +42,7 @@ export class UserService {
 		return this.getPublicUserFields(user)
 	}
 
-	async create(dto: UpdateUserDTO) {
+	async create(dto: UpdateUserDto) {
 		const oldUser = await this.userModel.findOne({ login: dto.login })
 
 		if (oldUser) {
@@ -52,11 +52,13 @@ export class UserService {
 		const salt = await genSalt(10)
 
 		const newUser = new this.userModel({
-			login: dto.login,
+			email: dto.email,
 			firstName: dto.firstName,
 			lastName: dto.lastName,
 			middleName: dto.middleName,
+			login: dto.login,
 			password: await hash(dto.password, salt),
+			role: dto.role,
 		})
 
 		await newUser.save()
@@ -64,7 +66,7 @@ export class UserService {
 		return this.getPublicUserFields(newUser)
 	}
 
-	async update(id: string, dto: UpdateUserDTO, avatarExt: string | undefined) {
+	async update(id: string, dto: UpdateUserDto, avatarExt: string | undefined) {
 		const oldUser = await this.userModel.findOne({ login: dto.login })
 
 		if (oldUser && oldUser._id.toString() !== id) {
@@ -72,10 +74,18 @@ export class UserService {
 		}
 
 		const salt = await genSalt(10)
-		console.log(avatarExt)
+
+		const avatar = (await this.userModel.findById(id)).avatar
+
 		const updatedUser = await this.userModel.findByIdAndUpdate(
 			id,
-			{ $set: { ...dto, ...(dto.password && { password: await hash(dto.password, salt) }), ...( avatarExt && { avatarExt } ) } },
+			{
+				$set: {
+					...dto,
+					...(dto.password && { password: await hash(dto.password, salt) }),
+					avatar: avatarExt ? `http://localhost:8000/${id}/avatar.${avatarExt}` : avatar ?? null,
+				},
+			},
 			{ new: true },
 		)
 
@@ -97,7 +107,7 @@ export class UserService {
 			email: user.email,
 			login: user.login,
 			role: user.role,
-			avatarExt: user.avatarExt
+			avatar: user.avatar,
 		}
 	}
 }

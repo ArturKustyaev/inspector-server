@@ -2,9 +2,11 @@ import {
 	Body,
 	Controller,
 	Delete,
+	FileTypeValidator,
 	Get,
 	HttpCode,
 	Param,
+	ParseFilePipe,
 	Post,
 	Put,
 	Query,
@@ -16,7 +18,7 @@ import {
 import { PaginatedQueryDto } from 'src/app.interface'
 import { Auth } from 'src/auth/auth.decorator'
 import { User } from './user.decorator'
-import { UpdateUserDTO } from './user.dto'
+import { UpdateUserDto } from './user.dto'
 import { NotFoundInterceptor } from './user.interceptor'
 import { UserService } from './user.service'
 import { FileInterceptor } from '@nestjs/platform-express'
@@ -59,7 +61,7 @@ export class UserController {
 	@Auth()
 	@HttpCode(200)
 	@UsePipes(new ValidationPipe())
-	async create(@Body() dto: UpdateUserDTO) {
+	async create(@Body() dto: UpdateUserDto) {
 		return this.userService.create(dto)
 	}
 
@@ -68,28 +70,42 @@ export class UserController {
 	@HttpCode(200)
 	@UsePipes(new ValidationPipe())
 	@UseInterceptors(new NotFoundInterceptor('Пользователь не найден'))
-	@UseInterceptors(FileInterceptor('file', { 
-		storage: diskStorage({
-			destination: (req: any, file: any, cb: any) => {
-				const uploadPath = "./uploads/"
+	@UseInterceptors(
+		FileInterceptor('avatar', {
+			storage: diskStorage({
+				destination: (req, _, cb) => {
+					const uploadPath = './uploads/'
 
-				if(!existsSync(uploadPath)) {
-					mkdirSync(uploadPath)
-				}
+					if (!existsSync(uploadPath)) {
+						mkdirSync(uploadPath)
+					}
 
-				if(!existsSync(`${uploadPath}/${req.params.id}`)) {
-					mkdirSync(`${uploadPath}/${req.params.id}`)
-				}
-				cb(null, uploadPath)
-			},
-			filename: (req: any, file: any, cb: any) => {
-				
-				cb(null, `${req.params.id}/avatar.${file.originalname.split(".")[1]}`);
-			},
-		})
-	}))
-	async update(@Param('id') id: string, @Body() dto: UpdateUserDTO, @UploadedFile() file: Express.Multer.File) {
-		return this.userService.update(id, dto, file.originalname.split(".")[1])
+					if (!existsSync(`${uploadPath}/${req.params.id}`)) {
+						mkdirSync(`${uploadPath}/${req.params.id}`)
+					}
+
+					cb(null, uploadPath)
+				},
+				filename: (req, file, cb) => {
+					cb(null, `${req.params.id}/avatar.${file.originalname.split('.')[1]}`)
+				},
+			}),
+		}),
+	)
+	async update(
+		@Param('id') id: string,
+		@Body() dto: UpdateUserDto,
+		@UploadedFile(
+			new ParseFilePipe({
+				validators: [new FileTypeValidator({ fileType: '.(png|jpeg|jpg)' })],
+				fileIsRequired: false,
+			}),
+		)
+		avatar?: Express.Multer.File,
+	) {
+		const fileExtension = avatar?.originalname.split('.')[1]
+
+		return this.userService.update(id, dto, fileExtension)
 	}
 
 	@Delete(':id')

@@ -1,33 +1,31 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { ModelType } from '@typegoose/typegoose/lib/types'
 import { InjectModel } from 'nestjs-typegoose'
-import { UserModel, UserService } from 'src/user'
-import { CreateTaskDto } from './task.dto'
-import { GetTasksRequest } from './task.interface'
-import { TaskModel } from './task.model'
+import { UserModel } from 'src/user'
+import { ChangeStatusDto, CreateTaskDto } from './task.dto'
+import { GetTasksRequest, TaskStatus, ViolationUser } from './task.interface'
+import { TaskModel, ViolationCourtModel, ViolationInfoModel } from './task.model'
 
 @Injectable()
 export class TaskService {
-	constructor(@InjectModel(TaskModel) private readonly taskModel: ModelType<TaskModel>) {}
+	constructor(
+		@InjectModel(TaskModel) private readonly taskModel: ModelType<TaskModel>,
+		@InjectModel(UserModel) private readonly userModel: ModelType<UserModel>,
+	) {}
 
 	async getAll(user: UserModel, { page = 1, limit = 30, query = '' }: GetTasksRequest) {
 		const skip = (page - 1) * limit
 
-		const tasks = await this.taskModel
-			.find({
-				$or: [{ title: { $regex: query, $options: 'i' } }],
-				$and: [user.role === 'admin' ? {} : { userId: user._id }],
-			})
-			.select('-__v')
-			.skip(skip)
-			.limit(limit)
+		const findOptions = {
+			$or: [{ 'violationInfo.title': { $regex: query, $options: 'i' } }],
+			$and: [
+				user.role === 'admin' || user.role === 'lawyer' ? {} : { 'user._id': user._id },
+				user.role === 'lawyer' ? { status: TaskStatus.coordination } : {},
+			],
+		}
 
-		const total = await this.taskModel
-			.countDocuments({
-				$or: [{ title: { $regex: query, $options: 'i' } }],
-				$and: [user.role === 'admin' ? {} : { userId: user._id }],
-			})
-			.exec()
+		const tasks = await this.taskModel.find(findOptions).select('-__v').skip(skip).limit(limit)
+		const total = await this.taskModel.countDocuments(findOptions).exec()
 
 		return {
 			data: tasks,
@@ -41,8 +39,38 @@ export class TaskService {
 		return task
 	}
 
-	async create(dto: CreateTaskDto) {
-		const newTask = await this.taskModel.create(dto)
+	async create(userId: string, dto: CreateTaskDto) {
+		const user = await this.userModel.findById(userId)
+		const { _id, lastName, firstName, middleName } = user
+
+		const violationUser: ViolationUser = {
+			_id,
+			lastName,
+			firstName,
+			middleName,
+		}
+
+		const violationInfo: ViolationInfoModel = {
+			title: dto.title,
+			status: TaskStatus.created,
+			discoveryDate: dto.discoveryDate ?? null,
+			description: dto.description ?? null,
+			district: dto.district ?? null,
+			location: dto.location ?? null,
+			user: violationUser,
+			violationType: dto.violationType ?? null,
+		}
+
+		const courtInfo: ViolationCourtModel = {
+			amount: null,
+			courtDecision: null,
+			endDate: null,
+		}
+
+		const newTask = await this.taskModel.create({
+			violationInfo,
+			courtInfo,
+		})
 
 		return newTask
 	}
@@ -54,11 +82,25 @@ export class TaskService {
 
 		if (!task) return
 
-		if (task.userId !== user._id.toString() && user.role !== 'admin') {
-			throw new BadRequestException('Вы не можете удалить чужое задание')
+		if (task.violationInfo.user._id.toString() !== user._id.toString() && user.role !== 'admin') {
+			throw new BadRequestException('Вы не можете удалить чужую запись о нарушении')
 		}
 
 		await this.taskModel.deleteOne({ _id: id }).exec()
+
+		return task
+	}
+
+	async changeStatus(dto: ChangeStatusDto) {
+		const task = await this.taskModel.findByIdAndUpdate(
+			dto.id,
+			{
+				$set: {
+					status: dto.status,
+				},
+			},
+			{ new: true },
+		)
 
 		return task
 	}

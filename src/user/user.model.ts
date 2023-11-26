@@ -22,5 +22,5 @@ export class UserModel extends TimeStamps {
 	role: string
 
 	@prop()
-	avatarExt: string
+	avatar: string | null
 }
