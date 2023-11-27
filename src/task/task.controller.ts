@@ -6,6 +6,7 @@ import {
 	HttpCode,
 	Param,
 	Post,
+	Put,
 	Query,
 	UseInterceptors,
 	UsePipes,
@@ -16,7 +17,7 @@ import { Auth } from 'src/auth/auth.decorator'
 import { UserModel } from 'src/user'
 import { User } from 'src/user/user.decorator'
 import { NotFoundInterceptor } from 'src/user/user.interceptor'
-import { ChangeStatusDto, CreateTaskDto } from './task.dto'
+import { ChangeStatusDto, CreateTaskDto, UpdateCourtDto, UpdateTaskDto } from './task.dto'
 import { TaskService } from './task.service'
 
 @Controller('tasks')
@@ -54,6 +55,14 @@ export class TaskController {
 		return this.taskService.create(userId, dto)
 	}
 
+	@Put('/update')
+	@HttpCode(200)
+	@Auth()
+	@UsePipes(new ValidationPipe())
+	async update(@Body() dto: UpdateTaskDto) {
+		return this.taskService.update(dto)
+	}
+
 	@Delete(':id')
 	@Auth()
 	@UseInterceptors(new NotFoundInterceptor('Запись о нарушении не найдена'))
@@ -68,5 +77,14 @@ export class TaskController {
 	@UseInterceptors(new NotFoundInterceptor('Запись о нарушении не найдена'))
 	async changeStatus(@Body() dto: ChangeStatusDto) {
 		return this.taskService.changeStatus(dto)
+	}
+
+	@Put('update-court')
+	@HttpCode(200)
+	@Auth()
+	@UsePipes(new ValidationPipe())
+	@UseInterceptors(new NotFoundInterceptor('Запись о нарушении не найдена'))
+	async updateCourt(@Body() dto: UpdateCourtDto) {
+		return this.taskService.updateCourtInfo(dto)
 	}
 }

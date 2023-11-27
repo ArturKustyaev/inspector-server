@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common'
 import { ModelType } from '@typegoose/typegoose/lib/types'
 import { InjectModel } from 'nestjs-typegoose'
 import { UserModel } from 'src/user'
-import { ChangeStatusDto, CreateTaskDto } from './task.dto'
+import { ChangeStatusDto, CreateTaskDto, UpdateCourtDto, UpdateTaskDto } from './task.dto'
 import { GetTasksRequest, TaskStatus, ViolationUser } from './task.interface'
 import { TaskModel, ViolationCourtModel, ViolationInfoModel } from './task.model'
 
@@ -19,8 +19,10 @@ export class TaskService {
 		const findOptions = {
 			$or: [{ 'violationInfo.title': { $regex: query, $options: 'i' } }],
 			$and: [
-				user.role === 'admin' || user.role === 'lawyer' ? {} : { 'user._id': user._id },
-				user.role === 'lawyer' ? { status: TaskStatus.coordination } : {},
+				user.role === 'admin' || user.role === 'lawyer' || user.role === 'supervisor'
+					? {}
+					: { 'user._id': user._id },
+				user.role === 'lawyer' ? { 'violationInfo.status': TaskStatus.coordination } : {},
 			],
 		}
 
@@ -75,7 +77,26 @@ export class TaskService {
 		return newTask
 	}
 
-	async update() {}
+	async update(dto: UpdateTaskDto) {
+		const violationInfo = {
+			'violationInfo.title': dto.title,
+			'violationInfo.description': dto.description,
+			'violationInfo.discoveryDate': dto.discoveryDate,
+			'violationInfo.district': dto.district,
+			'violationInfo.location': dto.location,
+			'violationInfo.violationType': dto.violationType,
+		}
+
+		const updatedViolation = await this.taskModel.findByIdAndUpdate(
+			dto.violationId,
+			{
+				$set: { ...violationInfo },
+			},
+			{ new: true },
+		)
+
+		return updatedViolation
+	}
 
 	async delete(user: UserModel, id: string) {
 		const task = await this.getById(id)
@@ -96,9 +117,25 @@ export class TaskService {
 			dto.id,
 			{
 				$set: {
-					status: dto.status,
+					'violationInfo.status': dto.status,
 				},
 			},
+			{ new: true },
+		)
+
+		return task
+	}
+
+	async updateCourtInfo(dto: UpdateCourtDto) {
+		const courtInfo = {
+			'courtInfo.endDate': dto.endDate,
+			'courtInfo.courtDecision': dto.courtDecision,
+			'courtInfo.amount': dto.amount,
+		}
+
+		const task = await this.taskModel.findByIdAndUpdate(
+			dto.violationId,
+			{ $set: { ...courtInfo, 'violationInfo.status': 'completed' } },
 			{ new: true },
 		)
 
