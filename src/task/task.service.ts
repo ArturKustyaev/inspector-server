@@ -2,8 +2,8 @@ import { BadRequestException, Injectable } from '@nestjs/common'
 import { ModelType } from '@typegoose/typegoose/lib/types'
 import { InjectModel } from 'nestjs-typegoose'
 import { UserModel } from 'src/user'
-import { ChangeStatusDto, CreateTaskDto, UpdateCourtDto, UpdateTaskDto } from './task.dto'
-import { GetTasksRequest, TaskStatus, ViolationUser } from './task.interface'
+import { ChangeStatusDto, CreateTaskDto, UpdateCourtDto, UpdateReviewsDto, UpdateTaskDto } from './task.dto'
+import { GetTasksRequest, ReviewStatus, TaskStatus, ViolationUser } from './task.interface'
 import { TaskModel, ViolationCourtModel, ViolationInfoModel } from './task.model'
 
 @Injectable()
@@ -21,9 +21,20 @@ export class TaskService {
 			$and: [
 				user.role === 'admin' || user.role === 'lawyer' || user.role === 'supervisor'
 					? {}
-					: { 'user._id': user._id },
-				user.role === 'lawyer' ? { 'violationInfo.status': TaskStatus.coordination } : {},
+					: { 'violationInfo.user._id': user._id },
 			],
+			'violationInfo.status': {
+				$in:
+					user.role === 'lawyer'
+						? [TaskStatus.coordination, TaskStatus.court]
+						: [
+								TaskStatus.completed,
+								TaskStatus.coordination,
+								TaskStatus.court,
+								TaskStatus.created,
+								TaskStatus.revision,
+						  ],
+			},
 		}
 
 		const tasks = await this.taskModel.find(findOptions).select('-__v').skip(skip).limit(limit)
@@ -124,6 +135,32 @@ export class TaskService {
 		)
 
 		return task
+	}
+
+	async approveViolation(userId: string, dto: UpdateReviewsDto) {
+		const user = await this.userModel.findById(userId)
+
+		const userInitials = `${user.lastName} ${user.firstName[0]}.${user.middleName[0]}.`
+
+		const violation = await this.taskModel.findByIdAndUpdate(
+			dto.id,
+			{
+				$set: {
+					'violationInfo.status': dto.status === ReviewStatus.approve ? 'court' : 'revision',
+				},
+				$push: {
+					review: {
+						user: userInitials,
+						status: dto.status,
+						date: dto.date,
+						message: dto.message ?? null,
+					},
+				},
+			},
+			{ new: true },
+		)
+
+		return violation
 	}
 
 	async updateCourtInfo(dto: UpdateCourtDto) {

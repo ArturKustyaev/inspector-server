@@ -1,5 +1,5 @@
 import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator'
-import { TaskStatus } from './task.interface'
+import { ReviewStatus, TaskStatus } from './task.interface'
 
 export class CreateTaskDto {
 	@IsString()
@@ -75,4 +75,19 @@ export class UpdateCourtDto {
 
 	@IsNumber()
 	amount: number
+}
+
+export class UpdateReviewsDto {
+	@IsString()
+	id: string
+
+	@IsEnum(ReviewStatus)
+	status: ReviewStatus
+
+	@IsString()
+	date: string
+
+	@IsString()
+	@IsOptional()
+	message: string
 }

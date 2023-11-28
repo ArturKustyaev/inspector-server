@@ -1,6 +1,6 @@
 import { prop } from '@typegoose/typegoose'
 import { Base, TimeStamps } from '@typegoose/typegoose/lib/defaultClasses'
-import { TaskStatus, ViolationUser } from './task.interface'
+import { ReviewStatus, TaskStatus, ViolationUser } from './task.interface'
 
 export interface TaskModel extends Base {}
 
@@ -21,10 +21,20 @@ export interface ViolationCourtModel {
 	amount: number
 }
 
+export interface ViolationReview {
+	user: string
+	status: ReviewStatus
+	date: string
+	message: string | null
+}
+
 export class TaskModel extends TimeStamps {
 	@prop()
 	violationInfo: ViolationInfoModel
 
 	@prop()
 	courtInfo: ViolationCourtModel
+
+	@prop()
+	review: ViolationReview[]
 }
